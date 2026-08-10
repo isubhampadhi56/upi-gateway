@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Payment Link</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 1rem;
+    }
+
+    .card {
+      background: white;
+      padding: 2.5rem 2rem;
+      border-radius: 20px;
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.15),
+        0 8px 20px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 0.25rem;
+    }
+
+    .card p {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+      text-align: left;
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      outline: none;
+    }
+
+    .form-group input:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+    }
+
+    .form-group input::placeholder {
+      color: #9ca3af;
+    }
+
+    .submit-btn {
+      display: block;
+      width: 100%;
+      padding: 0.875rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      margin-top: 0.5rem;
+    }
+
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    }
+
+    .submit-btn:active {
+      transform: translateY(0);
+    }
+
+    .submit-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .result {
+      display: none;
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 10px;
+      text-align: left;
+    }
+
+    .result.error {
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    .result h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #166534;
+      margin-bottom: 0.5rem;
+    }
+
+    .result.error h3 {
+      color: #991b1b;
+    }
+
+    .result a {
+      color: #667eea;
+      word-break: break-all;
+      font-size: 0.9rem;
+    }
+
+    .result .error-msg {
+      color: #991b1b;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+        background: white;
+        min-height: 100dvh;
+      }
+
+      .card {
+        max-width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 2rem 1.25rem;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .submit-btn {
+        padding: 1rem 1.5rem;
+        font-size: 1.05rem;
+        border-radius: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Create Payment Link</h1>
+    <p>Generate a UPI payment link with QR code and IP restriction</p>
+
+    <form id="createForm">
+      <div class="form-group">
+        <label for="intentURL">Intent URL</label>
+        <input
+          type="url"
+          id="intentURL"
+          name="intentURL"
+          placeholder="upi://pay?pa=example@upi&am=100"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="allowedIP">Allowed IPs</label>
+        <input
+          type="text"
+          id="allowedIP"
+          name="allowedIP"
+          placeholder="192.168.1.10, 10.0.0.5"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="orderId">Order ID</label>
+        <input
+          type="text"
+          id="orderId"
+          name="orderId"
+          placeholder="ORD-12345 (optional)"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="successCallbackUrl">Success Callback URL</label>
+        <input
+          type="url"
+          id="successCallbackUrl"
+          name="successCallbackUrl"
+          placeholder="https://example.com/success (optional)"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="failureCallbackUrl">Failure Callback URL</label>
+        <input
+          type="url"
+          id="failureCallbackUrl"
+          name="failureCallbackUrl"
+          placeholder="https://example.com/failure (optional)"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="pendingCallbackUrl">Pending/Timeout Callback URL</label>
+        <input
+          type="url"
+          id="pendingCallbackUrl"
+          name="pendingCallbackUrl"
+          placeholder="https://example.com/pending (optional)"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="timeout">Timeout (seconds)</label>
+        <input
+          type="number"
+          id="timeout"
+          name="timeout"
+          placeholder="300 (default: 86400)"
+          min="10"
+        />
+      </div>
+
+      <button type="submit" class="submit-btn">Create Link</button>
+    </form>
+
+    <div class="result" id="result">
+      <h3 id="resultTitle">Link Created</h3>
+      <a id="resultLink" href="#" target="_blank"></a>
+      <span class="error-msg" id="resultError"></span>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("createForm");
+    const result = document.getElementById("result");
+    const resultTitle = document.getElementById("resultTitle");
+    const resultLink = document.getElementById("resultLink");
+    const resultError = document.getElementById("resultError");
+    const submitBtn = form.querySelector(".submit-btn");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Creating...";
+      result.style.display = "none";
+      result.classList.remove("error");
+
+      const intentURL = document.getElementById("intentURL").value;
+      const allowedIP = document.getElementById("allowedIP").value;
+      const orderId = document.getElementById("orderId").value;
+      const successCallbackUrl = document.getElementById("successCallbackUrl").value;
+      const failureCallbackUrl = document.getElementById("failureCallbackUrl").value;
+      const pendingCallbackUrl = document.getElementById("pendingCallbackUrl").value;
+      const timeout = document.getElementById("timeout").value;
+
+      const body = { intentURL, allowedIP };
+      if (orderId) body.orderId = orderId;
+      if (timeout) body.timeout = Number(timeout);
+      if (successCallbackUrl || failureCallbackUrl || pendingCallbackUrl) {
+        body.callbackUrl = {};
+        if (successCallbackUrl) body.callbackUrl.successCallbackUrl = successCallbackUrl;
+        if (failureCallbackUrl) body.callbackUrl.failureCallbackUrl = failureCallbackUrl;
+        if (pendingCallbackUrl) body.callbackUrl.pendingCallbackUrl = pendingCallbackUrl;
+      }
+
+      try {
+        const res = await fetch("/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Something went wrong");
+        }
+
+        const fullURL = window.location.origin + data.url;
+        resultTitle.textContent = "Link Created";
+        resultLink.href = fullURL;
+        resultLink.textContent = fullURL;
+        resultLink.style.display = "inline";
+        resultError.style.display = "none";
+        result.classList.remove("error");
+      } catch (err) {
+        resultTitle.textContent = "Error";
+        resultError.textContent = err.message;
+        resultError.style.display = "inline";
+        resultLink.style.display = "none";
+        result.classList.add("error");
+      } finally {
+        result.style.display = "block";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Create Link";
+      }
+    });
+  </script>
+</body>
+</html>

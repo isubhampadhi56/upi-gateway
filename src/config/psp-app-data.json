@@ -1,0 +1,44 @@
+[
+  {
+    "id": "9e15f6a7-75f1-41d1-be21-1da8f82f8213",
+    "name": "Paytm",
+    "identifier": "paytm",
+    "url": "paytmmp:\/\/",
+    "logoUrl": "https:\/\/static-content.isubhampadhi.com\/upi-icon\/paytm.svg"
+  },
+  {
+    "id": "b158c6d5-a8bd-46c9-90b4-992787ded8c5",
+    "name": "PhonePe",
+    "identifier": "phonepe",
+    "url": "phonepe:\/\/",
+    "logoUrl": "https:\/\/static-content.isubhampadhi.com\/upi-icon\/phonepe.svg"
+  },
+  {
+    "id": "37445fe3-32f8-4f7d-a267-258eab1e4cc1",
+    "name": "Google Pay",
+    "identifier": "gpay",
+    "url": "tez:\/\/upi\/",
+    "logoUrl": "https:\/\/static-content.isubhampadhi.com\/upi-icon\/gpay.svg"
+  },
+  {
+    "id": "0616cfc3-7dea-4895-9d42-11d16ce31858",
+    "name": "BHIM",
+    "identifier": "bhim",
+    "url": "bhim:\/\/upi\/",
+    "logoUrl": "https:\/\/static-content.isubhampadhi.com\/upi-icon\/bhim.svg"
+  },
+  {
+    "id": "58011ffc-7057-4885-bc19-5605c909e334",
+    "name": "CRED",
+    "identifier": "cred",
+    "url": "credpay:\/\/upi\/",
+    "logoUrl": "https:\/\/static-content.isubhampadhi.com\/upi-icon\/cred.svg"
+  },
+  {
+    "id": "b90b40ff-0acd-4176-bf57-53453c39615b",
+    "name": "Others",
+    "identifier": "default",
+    "url": "upi:\/\/",
+    "logoUrl": ""
+  }
+]

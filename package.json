@@ -1,0 +1,39 @@
+{
+  "name": "upi-gateway",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && cp src/views/*.html dist/views/",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "jest --runInBand"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "qrcode": "^1.5.4",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^1.1.0",
+    "typescript": "^7.0.2",
+    "uuid": "^14.0.1"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.15.47",
+    "@swc/jest": "^0.2.39",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.2.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/supertest": "^7.2.1",
+    "@types/uuid": "^10.0.0",
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2",
+    "tsx": "^4.23.12"
+  }
+}

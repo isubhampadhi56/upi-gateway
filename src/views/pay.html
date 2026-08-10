@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Complete Payment</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .payment-container {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      max-width: 420px;
+      width: 100%;
+      overflow: hidden;
+      animation: slideUp 0.4s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Header */
+    .payment-header {
+      background: #1b2b44;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .payment-header .brand {
+      color: #fff;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+    }
+
+    .payment-header .secure-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      color: #8fa4bf;
+      font-size: 0.7rem;
+    }
+
+    .payment-header .secure-badge svg {
+      width: 12px;
+      height: 12px;
+      fill: #8fa4bf;
+    }
+
+    .countdown {
+      color: #f59e0b;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Body */
+    .payment-body {
+      padding: 1.5rem;
+    }
+
+    /* QR Section */
+    .qr-section {
+      text-align: center;
+    }
+
+    .qr-section .qr-frame {
+      background: #f8fafc;
+      border: 1px solid #e8ecf0;
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: inline-block;
+      margin-bottom: 0.75rem;
+    }
+
+    .qr-section .qr-frame img {
+      width: 180px;
+      height: 180px;
+    }
+
+    .qr-section .qr-hint {
+      font-size: 0.8rem;
+      color: #6b7b8d;
+      line-height: 1.5;
+    }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 1.25rem 0;
+      color: #9ca3af;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #e8ecf0;
+    }
+
+    .divider::before {
+      margin-right: 0.75rem;
+    }
+
+    .divider::after {
+      margin-left: 0.75rem;
+    }
+
+    /* Apps Section */
+    .apps-section-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.75rem;
+    }
+
+    .apps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .app-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.875rem 0.5rem;
+      border: 1px solid #e8ecf0;
+      border-radius: 10px;
+      text-decoration: none;
+      color: #1a2b3c;
+      font-size: 0.72rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .app-btn:hover {
+      border-color: #2563eb;
+      background: #f0f5ff;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+    }
+
+    .app-btn:active {
+      transform: translateY(0);
+    }
+
+    .app-btn img {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      object-fit: contain;
+    }
+
+    .app-btn .app-icon-placeholder {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: #e8ecf0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .app-btn span {
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    /* Intent link fallback */
+    .intent-section {
+      margin-top: 1.25rem;
+      text-align: center;
+    }
+
+    .intent-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.7rem 1.25rem;
+      background: #2563eb;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .intent-link:hover {
+      background: #1d4ed8;
+    }
+
+    /* Footer */
+    .payment-footer {
+      border-top: 1px solid #e8ecf0;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      font-size: 0.7rem;
+      color: #8fa4bf;
+    }
+
+    /* Mobile */
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+        background: #fff;
+        align-items: flex-start;
+      }
+
+      .payment-container {
+        max-width: 100%;
+        border-radius: 0;
+        box-shadow: none;
+        min-height: 100dvh;
+      }
+
+      .qr-section .qr-frame img {
+        width: 160px;
+        height: 160px;
+      }
+
+      .apps-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.6rem;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .apps-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .qr-section .qr-frame img {
+        width: 140px;
+        height: 140px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="payment-container">
+    <!-- Header -->
+    <div class="payment-header">
+      <div class="brand">UPI Gateway</div>
+      <div class="secure-badge">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        Secured
+      </div>
+      <div class="countdown" id="countdown"></div>
+    </div>
+
+    <!-- Body -->
+    <div class="payment-body">
+      <!-- QR Code -->
+      <div class="qr-section">
+        <div class="qr-frame">
+          <img src="{{qrDataURL}}" alt="QR Code for payment" />
+        </div>
+        <p class="qr-hint">Scan this QR code with any UPI app to pay</p>
+      </div>
+
+      <div class="divider">or pay using</div>
+
+      <!-- UPI Apps -->
+      <p class="apps-section-title">UPI Apps</p>
+      <div class="apps-grid">
+        {{deeplinks}}
+      </div>
+
+      <div class="intent-section">
+        <a class="intent-link" href="{{intentURL}}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open default UPI app
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="payment-footer">
+      Powered by UPI Gateway
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const paymentId = "{{paymentId}}";
+      const expireAt = "{{expireAt}}";
+      if (!paymentId) return;
+
+      // Countdown timer
+      const countdownEl = document.getElementById("countdown");
+      const expireTime = new Date(expireAt).getTime();
+      let pendingCallbackUrl = null;
+
+      function updateCountdown() {
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((expireTime - now) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        countdownEl.textContent = remaining > 0
+          ? mins.toString().padStart(2, "0") + ":" + secs.toString().padStart(2, "0")
+          : "Expired";
+
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          clearInterval(pollInterval);
+          if (pendingCallbackUrl) {
+            window.location.href = pendingCallbackUrl;
+          }
+        }
+      }
+
+      const countdownInterval = setInterval(updateCountdown, 1000);
+      updateCountdown();
+
+      // Poll status every 5 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch("/status/" + paymentId);
+          if (!res.ok) return;
+          const data = await res.json();
+
+          // Cache pendingCallbackUrl for timeout redirect
+          if (data.pendingCallbackUrl) pendingCallbackUrl = data.pendingCallbackUrl;
+
+          if (data.status === "success" && data.successCallbackUrl) {
+            clearInterval(pollInterval);
+            clearInterval(countdownInterval);
+            window.location.href = data.successCallbackUrl;
+          } else if (data.status === "failure" && data.failureCallbackUrl) {
+            clearInterval(pollInterval);
+            clearInterval(countdownInterval);
+            window.location.href = data.failureCallbackUrl;
+          }
+        } catch (e) {
+          // silently retry on next interval
+        }
+      }, 5000);
+    })();
+  </script>
+</body>
+</html>
