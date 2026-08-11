@@ -1,6 +1,6 @@
 import request from "supertest";
 import { createHmac } from "crypto";
-import { AppDataSource, paymentLinkRepo } from "../config/database";
+import { AppDataSource, paymentLinkRepo, intitializeDBData } from "../config/database";
 import app from "../app";
 import { TransactionStatus } from "../models/PaymentLink";
 
@@ -14,6 +14,7 @@ function generateChecksum(body: object): string {
 
 beforeAll(async () => {
   await AppDataSource.initialize();
+  await intitializeDBData();
 });
 
 afterAll(async () => {
@@ -412,5 +413,34 @@ describe("GET /status/:id after updatePayment", () => {
     expect(res.body.status).toBe("success");
     expect(res.body.successCallbackUrl).toBe("https://example.com/done?status=success&orderId=ORD-FLOW");
     expect(res.body.failureCallbackUrl).toBe("https://example.com/fail?status=success&orderId=ORD-FLOW");
+  });
+});
+
+describe("GET /upiAppsList", () => {
+  it("should return a list of UPI apps", async () => {
+    const res = await request(app)
+      .get("/upiAppsList")
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+
+    const firstApp = res.body[0];
+    expect(firstApp).toHaveProperty("id");
+    expect(firstApp).toHaveProperty("identifier");
+    expect(firstApp).toHaveProperty("name");
+    expect(firstApp).toHaveProperty("url");
+    expect(firstApp).toHaveProperty("logoUrl");
+  });
+
+  it("should include known apps like gpay and phonepe", async () => {
+    const res = await request(app)
+      .get("/upiAppsList")
+      .expect(200);
+
+    const identifiers = res.body.map((app: { identifier: string }) => app.identifier);
+    expect(identifiers).toContain("gpay");
+    expect(identifiers).toContain("phonepe");
   });
 });

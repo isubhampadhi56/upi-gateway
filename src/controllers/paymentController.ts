@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { createHmac } from "crypto";
 import { v4 as uuidv4 } from "uuid";
-import { paymentLinkRepo } from "../config/database";
+import { paymentLinkRepo, pspAppsListRepo } from "../config/database";
 import { PaymentLink, TransactionStatus } from "../models/PaymentLink";
 import { renderPayPage } from "../views/payView";
 import { renderCreatePage } from "../views/createView";
@@ -15,7 +15,7 @@ export function getCreatePage(_req: Request, res: Response) {
 
 export async function createPaymentLink(req: Request, res: Response) {
   try {
-    const { intentURL, allowedIP, callbackUrl, orderId, timeout } = req.body;
+    const { intentURL, allowedIP, callbackUrl, orderId, timeout, upiApps } = req.body;
 
     if (!intentURL || !allowedIP) {
       res.status(400).json({ error: "intentURL and allowedIP are required" });
@@ -33,6 +33,7 @@ export async function createPaymentLink(req: Request, res: Response) {
       id, intentURL, allowedIP, createdAt, expireAt,
       callbackUrl: callbackUrl ? JSON.stringify(callbackUrl) : null,
       orderId: orderId || null,
+      upiApps: upiApps || null,
     });
     await paymentLinkRepo.save(link);
 
@@ -82,9 +83,12 @@ export async function getPayPage(req: Request, res: Response) {
       return;
     }
 
-    const deeplinks = await generateDeeplinks(link.intentURL, [
-      "gpay", "phonepe", "paytm", "cred", "bhim",
-    ]);
+    const defaultApps = ["gpay", "phonepe", "paytm", "cred", "bhim"];
+    const appsList = link.upiApps
+      ? link.upiApps.split(",").map((a) => a.trim())
+      : defaultApps;
+
+    const deeplinks = await generateDeeplinks(link.intentURL, appsList);
 
     // Record first click info
     if (!link.clickedAt) {
@@ -192,6 +196,16 @@ export async function updatePayment(req: Request, res: Response) {
     res.json({ message: "Payment status updated", id, status });
   } catch (error) {
     console.error("Error updating payment:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function getUpiAppsList(_req: Request, res: Response) {
+  try {
+    const apps = await pspAppsListRepo.find();
+    res.json(apps);
+  } catch (error) {
+    console.error("Error fetching UPI apps list:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 }
