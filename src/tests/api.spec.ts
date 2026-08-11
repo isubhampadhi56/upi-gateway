@@ -40,7 +40,8 @@ describe("POST /create", () => {
       .send({ allowedIP: "127.0.0.1" })
       .expect(400);
 
-    expect(res.body.error).toBe("intentURL and allowedIP are required");
+    expect(res.body.error).toBe("Validation failed");
+    expect(res.body.details).toBeDefined();
   });
 
   it("should return 400 if allowedIP is missing", async () => {
@@ -49,7 +50,8 @@ describe("POST /create", () => {
       .send({ intentURL: "upi://pay?pa=test@upi" })
       .expect(400);
 
-    expect(res.body.error).toBe("intentURL and allowedIP are required");
+    expect(res.body.error).toBe("Validation failed");
+    expect(res.body.details).toBeDefined();
   });
 
   it("should store orderId when provided", async () => {
@@ -329,7 +331,7 @@ describe("POST /updatePayment", () => {
       .send(body)
       .expect(400);
 
-    expect(res.body.error).toContain("Invalid status");
+    expect(res.body.error).toBe("Validation failed");
   });
 
   it("should return 400 if id is missing", async () => {
@@ -342,7 +344,7 @@ describe("POST /updatePayment", () => {
       .send(body)
       .expect(400);
 
-    expect(res.body.error).toBe("id and status are required");
+    expect(res.body.error).toBe("Validation failed");
   });
 
   it("should return 404 for non-existent payment id", async () => {
@@ -442,5 +444,101 @@ describe("GET /upiAppsList", () => {
     const identifiers = res.body.map((app: { identifier: string }) => app.identifier);
     expect(identifiers).toContain("gpay");
     expect(identifiers).toContain("phonepe");
+  });
+});
+
+describe("Zod validation on POST /create", () => {
+  it("should reject intentURL that does not start with upi://", async () => {
+    const res = await request(app)
+      .post("/create")
+      .send({ intentURL: "https://not-upi.com/pay", allowedIP: "127.0.0.1" })
+      .expect(400);
+
+    expect(res.body.error).toBe("Validation failed");
+    expect(res.body.details.some((d: string) => d.includes("upi://"))).toBe(true);
+  });
+
+  it("should reject empty intentURL", async () => {
+    const res = await request(app)
+      .post("/create")
+      .send({ intentURL: "", allowedIP: "127.0.0.1" })
+      .expect(400);
+
+    expect(res.body.error).toBe("Validation failed");
+  });
+
+  it("should reject invalid timeout (negative)", async () => {
+    const res = await request(app)
+      .post("/create")
+      .send({ intentURL: "upi://pay?pa=t@upi", allowedIP: "127.0.0.1", timeout: -5 })
+      .expect(400);
+
+    expect(res.body.error).toBe("Validation failed");
+    expect(res.body.details.some((d: string) => d.includes("timeout"))).toBe(true);
+  });
+
+  it("should reject invalid callbackUrl (not a URL)", async () => {
+    const res = await request(app)
+      .post("/create")
+      .send({
+        intentURL: "upi://pay?pa=t@upi",
+        allowedIP: "127.0.0.1",
+        callbackUrl: { successCallbackUrl: "not-a-url" },
+      })
+      .expect(400);
+
+    expect(res.body.error).toBe("Validation failed");
+    expect(res.body.details.some((d: string) => d.includes("URL"))).toBe(true);
+  });
+
+  it("should accept valid complete payload", async () => {
+    const res = await request(app)
+      .post("/create")
+      .send({
+        intentURL: "upi://pay?pa=test@upi&am=100",
+        allowedIP: "0.0.0.0/0",
+        orderId: "ORD-ZOD",
+        timeout: 120,
+        upiApps: "gpay,phonepe",
+        callbackUrl: {
+          successCallbackUrl: "https://example.com/ok",
+          failureCallbackUrl: "https://example.com/fail",
+          pendingCallbackUrl: "https://example.com/wait",
+        },
+      })
+      .expect(201);
+
+    expect(res.body).toHaveProperty("id");
+    expect(res.body).toHaveProperty("url");
+  });
+});
+
+describe("Zod validation on POST /updatePayment", () => {
+  it("should reject invalid status value after valid checksum", async () => {
+    const body = { id: "some-id", status: "cancelled" };
+    const checksum = generateChecksum(body);
+
+    const res = await request(app)
+      .post("/updatePayment")
+      .set("x-checksum", checksum)
+      .send(body)
+      .expect(400);
+
+    expect(res.body.error).toBe("Validation failed");
+    expect(res.body.details.some((d: string) => d.includes("status"))).toBe(true);
+  });
+
+  it("should reject empty id after valid checksum", async () => {
+    const body = { id: "", status: "success" };
+    const checksum = generateChecksum(body);
+
+    const res = await request(app)
+      .post("/updatePayment")
+      .set("x-checksum", checksum)
+      .send(body)
+      .expect(400);
+
+    expect(res.body.error).toBe("Validation failed");
+    expect(res.body.details.some((d: string) => d.includes("id"))).toBe(true);
   });
 });
