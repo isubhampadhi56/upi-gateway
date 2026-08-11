@@ -138,6 +138,42 @@ describe("GET /pay/:id", () => {
     expect(res.text).toContain("QR Code");
   });
 
+  it("should allow access when client IP matches CIDR range", async () => {
+    const createRes = await request(app)
+      .post("/create")
+      .send({ intentURL: "upi://pay?pa=cidr@upi", allowedIP: "127.0.0.0/8" });
+
+    const res = await request(app)
+      .get(`/pay/${createRes.body.id}`)
+      .expect(200);
+
+    expect(res.text).toContain("QR Code");
+  });
+
+  it("should allow access with 0.0.0.0/0 (allow all)", async () => {
+    const createRes = await request(app)
+      .post("/create")
+      .send({ intentURL: "upi://pay?pa=all@upi", allowedIP: "0.0.0.0/0" });
+
+    const res = await request(app)
+      .get(`/pay/${createRes.body.id}`)
+      .expect(200);
+
+    expect(res.text).toContain("QR Code");
+  });
+
+  it("should deny access when client IP is outside CIDR range", async () => {
+    const createRes = await request(app)
+      .post("/create")
+      .send({ intentURL: "upi://pay?pa=cidr-deny@upi", allowedIP: "10.0.0.0/8" });
+
+    const res = await request(app)
+      .get(`/pay/${createRes.body.id}`)
+      .expect(403);
+
+    expect(res.text).toBe("Access denied: your IP is not allowed");
+  });
+
   it("should record clickedAt and clickedBy on first visit", async () => {
     const createRes = await request(app)
       .post("/create")
