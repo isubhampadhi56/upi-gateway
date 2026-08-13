@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
 import { createHmac } from "crypto";
 import { v4 as uuidv4 } from "uuid";
-import { paymentLinkRepo } from "../config/database";
+import { paymentLinkRepo, pspAppsListRepo } from "../config/database";
 import { PaymentLink, TransactionStatus } from "../models/PaymentLink";
 import { renderPayPage } from "../views/payView";
 import { renderCreatePage } from "../views/createView";
 import { generateDeeplinks } from "../utils/deeplinkGen";
+import { updatePaymentSchema } from "../schemas/paymentSchemas";
 import { isIPAllowed } from "../utils/ipMatch";
 
 
@@ -16,12 +17,7 @@ export function getCreatePage(_req: Request, res: Response) {
 
 export async function createPaymentLink(req: Request, res: Response) {
   try {
-    const { intentURL, allowedIP, callbackUrl, orderId, timeout } = req.body;
-
-    if (!intentURL || !allowedIP) {
-      res.status(400).json({ error: "intentURL and allowedIP are required" });
-      return;
-    }
+    const { intentURL, allowedIP, callbackUrl, orderId, timeout, upiApps } = req.body;
 
     const id = uuidv4();
     const createdAt = new Date();
@@ -34,6 +30,7 @@ export async function createPaymentLink(req: Request, res: Response) {
       id, intentURL, allowedIP, createdAt, expireAt,
       callbackUrl: callbackUrl ? JSON.stringify(callbackUrl) : null,
       orderId: orderId || null,
+      upiApps: upiApps || null,
     });
     await paymentLinkRepo.save(link);
 
@@ -83,9 +80,12 @@ export async function getPayPage(req: Request, res: Response) {
       return;
     }
 
-    const deeplinks = await generateDeeplinks(link.intentURL, [
-      "gpay", "phonepe", "paytm", "cred", "bhim",
-    ]);
+    const defaultApps = ["gpay", "phonepe", "paytm", "cred", "bhim"];
+    const appsList = link.upiApps
+      ? link.upiApps.split(",").map((a) => a.trim())
+      : defaultApps;
+
+    const deeplinks = await generateDeeplinks(link.intentURL, appsList);
 
     // Record first click info
     if (!link.clickedAt) {
@@ -167,17 +167,15 @@ export async function updatePayment(req: Request, res: Response) {
       return;
     }
 
-    const { id, status, errorMessage } = req.body;
-
-    if (!id || !status) {
-      res.status(400).json({ error: "id and status are required" });
+    // Validate body with Zod after checksum verification
+    const parsed = updatePaymentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`);
+      res.status(400).json({ error: "Validation failed", details: messages });
       return;
     }
 
-    if (!Object.values(TransactionStatus).includes(status)) {
-      res.status(400).json({ error: `Invalid status. Must be one of: ${Object.values(TransactionStatus).join(", ")}` });
-      return;
-    }
+    const { id, status, errorMessage } = parsed.data;
 
     const link = await paymentLinkRepo.findOneBy({ id });
 
@@ -186,13 +184,23 @@ export async function updatePayment(req: Request, res: Response) {
       return;
     }
 
-    link.status = status;
+    link.status = status as TransactionStatus;
     if (errorMessage) link.errorMessage = errorMessage;
     await paymentLinkRepo.save(link);
 
     res.json({ message: "Payment status updated", id, status });
   } catch (error) {
     console.error("Error updating payment:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function getUpiAppsList(_req: Request, res: Response) {
+  try {
+    const apps = await pspAppsListRepo.find();
+    res.json(apps);
+  } catch (error) {
+    console.error("Error fetching UPI apps list:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 }

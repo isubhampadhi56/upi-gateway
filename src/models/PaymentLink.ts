@@ -40,4 +40,7 @@ export class PaymentLink {
 
   @Column({ type: "varchar", nullable: true })
   errorMessage!: string | null;
+
+  @Column({ type: "varchar", nullable: true })
+  upiApps!: string | null;
 }

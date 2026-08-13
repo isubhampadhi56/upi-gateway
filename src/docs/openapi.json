@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "UPI Gateway API",
-    "description": "API for creating UPI payment links with QR codes, app-specific deeplinks, IP restrictions, and webhook-based status updates.",
-    "version": "1.0.0"
+    "description": "API for creating UPI payment links with QR codes, app-specific deeplinks, IP/CIDR-based access control, Zod validation, and webhook-driven status updates.",
+    "version": "1.1.0"
   },
   "servers": [
     { "url": "http://localhost:3000", "description": "Local development" }
@@ -13,6 +13,7 @@
       "get": {
         "summary": "Render create payment link form",
         "description": "Returns an HTML page with a form to create a new payment link.",
+        "tags": ["Payment Links"],
         "responses": {
           "200": {
             "description": "HTML form page",
@@ -22,6 +23,8 @@
       },
       "post": {
         "summary": "Create a new payment link",
+        "description": "Creates a payment link with QR code generation. Request body is validated using Zod schema.",
+        "tags": ["Payment Links"],
         "requestBody": {
           "required": true,
           "content": {
@@ -40,10 +43,10 @@
             }
           },
           "400": {
-            "description": "Validation error",
+            "description": "Validation error (Zod)",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
               }
             }
           }
@@ -53,7 +56,8 @@
     "/pay/{id}": {
       "get": {
         "summary": "Render payment page",
-        "description": "Displays QR code, UPI app deeplinks, and a countdown timer. Only accessible from allowed IPs.",
+        "description": "Displays QR code, UPI app deeplinks, and a countdown timer. Only accessible from allowed IPs/CIDRs. Records first click metadata. Polls /status/:id every 5s for redirects.",
+        "tags": ["Payment Page"],
         "parameters": [
           {
             "name": "id",
@@ -64,10 +68,9 @@
         ],
         "responses": {
           "200": {
-            "description": "Payment HTML page with QR code and deeplinks",
-            "content": { "text/html": {} }
+            "description": "Payment HTML page with QR code, deeplinks, and countdown"
           },
-          "403": { "description": "IP not allowed" },
+          "403": { "description": "Client IP not in allowed list" },
           "404": { "description": "Payment link not found" },
           "410": { "description": "Payment link expired" }
         }
@@ -76,7 +79,8 @@
     "/status/{id}": {
       "get": {
         "summary": "Get payment status",
-        "description": "Returns the current payment status and callback URLs with query params appended.",
+        "description": "Returns the current payment status, expiry time, and callback URLs with status, orderId, and errMsg query params appended.",
+        "tags": ["Payment Status"],
         "parameters": [
           {
             "name": "id",
@@ -87,7 +91,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Payment status",
+            "description": "Payment status with callback URLs",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/PaymentStatusResponse" }
@@ -108,13 +112,14 @@
     "/updatePayment": {
       "post": {
         "summary": "Update payment status (webhook)",
-        "description": "Webhook endpoint to update payment status. Requires HMAC-SHA256 checksum validation.",
+        "description": "Webhook endpoint to update payment status. Requires HMAC-SHA256 checksum validation via x-checksum header. Body is validated with Zod after checksum verification.",
+        "tags": ["Webhook"],
         "parameters": [
           {
             "name": "x-checksum",
             "in": "header",
             "required": true,
-            "description": "HMAC-SHA256 hex digest of the request body using WEBHOOK_SECRET",
+            "description": "HMAC-SHA256 hex digest of the JSON request body using WEBHOOK_SECRET",
             "schema": { "type": "string" }
           }
         ],
@@ -135,9 +140,36 @@
               }
             }
           },
-          "400": { "description": "Missing checksum or invalid request body" },
+          "400": {
+            "description": "Missing checksum header or validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ValidationErrorResponse" }
+              }
+            }
+          },
           "401": { "description": "Invalid checksum" },
           "404": { "description": "Payment link not found" }
+        }
+      }
+    },
+    "/upiAppsList": {
+      "get": {
+        "summary": "List available UPI apps",
+        "description": "Returns all registered PSP apps with their identifiers, names, URL schemes, and logo URLs.",
+        "tags": ["UPI Apps"],
+        "responses": {
+          "200": {
+            "description": "List of UPI apps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/UPIApp" }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -150,13 +182,13 @@
         "properties": {
           "intentURL": {
             "type": "string",
-            "description": "UPI intent URL",
+            "description": "UPI intent URL (must start with upi://)",
             "example": "upi://pay?pa=merchant@upi&am=100&pn=Merchant"
           },
           "allowedIP": {
             "type": "string",
-            "description": "Comma-separated list of allowed client IPs",
-            "example": "192.168.1.10, 10.0.0.5"
+            "description": "Comma-separated list of allowed IPs or CIDR ranges",
+            "example": "192.168.1.0/24, 10.0.0.5, 0.0.0.0/0"
           },
           "orderId": {
             "type": "string",
@@ -165,15 +197,33 @@
           },
           "timeout": {
             "type": "number",
-            "description": "Link expiry timeout in seconds (default: 86400)",
+            "description": "Link expiry timeout in seconds. Must be positive. Default: 86400 (24h)",
             "example": 300
+          },
+          "upiApps": {
+            "type": "string",
+            "description": "Comma-separated PSP app identifiers to show on payment page. Default: gpay,phonepe,paytm,cred,bhim",
+            "example": "gpay,phonepe,cred"
           },
           "callbackUrl": {
             "type": "object",
+            "description": "Callback URLs for redirect after payment resolution",
             "properties": {
-              "successCallbackUrl": { "type": "string", "format": "uri" },
-              "failureCallbackUrl": { "type": "string", "format": "uri" },
-              "pendingCallbackUrl": { "type": "string", "format": "uri" }
+              "successCallbackUrl": {
+                "type": "string",
+                "format": "uri",
+                "description": "Redirect URL on successful payment"
+              },
+              "failureCallbackUrl": {
+                "type": "string",
+                "format": "uri",
+                "description": "Redirect URL on failed payment (errMsg appended)"
+              },
+              "pendingCallbackUrl": {
+                "type": "string",
+                "format": "uri",
+                "description": "Redirect URL on timeout while still pending"
+              }
             }
           }
         }
@@ -182,7 +232,7 @@
         "type": "object",
         "properties": {
           "id": { "type": "string", "format": "uuid" },
-          "url": { "type": "string", "example": "/pay/uuid-here" }
+          "url": { "type": "string", "example": "/pay/550e8400-e29b-41d4-a716-446655440000" }
         }
       },
       "PaymentStatusResponse": {
@@ -191,32 +241,77 @@
           "status": { "type": "string", "enum": ["pending", "success", "failure"] },
           "orderId": { "type": "string", "nullable": true },
           "expireAt": { "type": "string", "format": "date-time" },
-          "successCallbackUrl": { "type": "string", "nullable": true },
-          "failureCallbackUrl": { "type": "string", "nullable": true },
-          "pendingCallbackUrl": { "type": "string", "nullable": true }
+          "successCallbackUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Includes ?status=...&orderId=... query params"
+          },
+          "failureCallbackUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Includes ?status=...&orderId=...&errMsg=... query params"
+          },
+          "pendingCallbackUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Includes ?status=...&orderId=... query params"
+          }
         }
       },
       "UpdatePaymentRequest": {
         "type": "object",
         "required": ["id", "status"],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "status": { "type": "string", "enum": ["pending", "success", "failure"] },
-          "errorMessage": { "type": "string", "description": "Error message for failure status" }
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Payment link ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "success", "failure"],
+            "description": "New payment status"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Error message (appended as errMsg to failureCallbackUrl)"
+          }
         }
       },
       "UpdatePaymentResponse": {
         "type": "object",
         "properties": {
-          "message": { "type": "string" },
+          "message": { "type": "string", "example": "Payment status updated" },
           "id": { "type": "string" },
           "status": { "type": "string" }
+        }
+      },
+      "UPIApp": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "identifier": { "type": "string", "example": "gpay" },
+          "name": { "type": "string", "example": "Google Pay" },
+          "url": { "type": "string", "example": "tez://upi/" },
+          "logoUrl": { "type": "string", "format": "uri" }
         }
       },
       "ErrorResponse": {
         "type": "object",
         "properties": {
           "error": { "type": "string" }
+        }
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "Validation failed" },
+          "details": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of field-level validation errors",
+            "example": ["intentURL: intentURL must start with upi://"]
+          }
         }
       }
     }
