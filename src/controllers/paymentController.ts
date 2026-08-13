@@ -7,6 +7,7 @@ import { renderPayPage } from "../views/payView";
 import { renderCreatePage } from "../views/createView";
 import { generateDeeplinks } from "../utils/deeplinkGen";
 import { updatePaymentSchema } from "../schemas/paymentSchemas";
+import { isIPAllowed } from "../utils/ipMatch";
 
 
 
@@ -74,7 +75,7 @@ export async function getPayPage(req: Request, res: Response) {
     // Check if client IP is in the comma-separated allowed list
     const allowedIPs = link.allowedIP.split(",").map((ip) => ip.trim());
 
-    if (!allowedIPs.includes(normalizedIP)) {
+    if (!isIPAllowed(normalizedIP, allowedIPs)) {
       res.status(403).send("Access denied: your IP is not allowed");
       return;
     }
